@@ -2,17 +2,17 @@
 
 namespace Kuba9392\Service\Report;
 
-use Kuba9392\Service\Email\EmailSender;
+use Kuba9392\Service\Sms\SmsSender;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase;
 
-class EmailReportGenerateStrategyTest extends TestCase
+class SmsReportGenerateStrategyITest extends TestCase
 {
     use MockeryPHPUnitIntegration;
 
     /**
-     * @var MockInterface | EmailSender
+     * @var MockInterface | SmsSender
      */
     private $sender;
 
@@ -22,22 +22,23 @@ class EmailReportGenerateStrategyTest extends TestCase
     private $report;
 
     /**
-     * @var EmailReportGenerateStrategy
+     * @var SmsReportGenerateStrategy
      */
     private $strategy;
 
     public function setUp()
     {
-        $this->sender = \Mockery::mock(EmailSender::class);
+        $this->sender = \Mockery::mock(SmsSender::class);
         $this->report = \Mockery::mock(Report::class);
-        $this->strategy = new EmailReportGenerateStrategy($this->sender, $this->report);
+        $this->strategy = new SmsReportGenerateStrategy($this->sender, $this->report);
     }
 
     public function testGenerateWhenSingleFileDataWithChangedDataExist()
     {
         $reportFileData = \Mockery::mock(ReportFileData::class);
         $this->report->expects("getData")->andReturn([$reportFileData]);
-        $this->mockDataDiffs($reportFileData)->expects("getComparingData")->andReturn(["changed_value"]);
+        $this->mockDataDiffs($reportFileData)->expects("getOriginalData")->andReturn("test");
+        $this->mockDataDiffs($reportFileData)->expects("getComparingData")->andReturn("test1");
         $this->sender->expects("send");
 
         $this->strategy->generate();
@@ -48,8 +49,10 @@ class EmailReportGenerateStrategyTest extends TestCase
         $reportFileData1 = \Mockery::mock(ReportFileData::class);
         $reportFileData2 = \Mockery::mock(ReportFileData::class);
         $this->report->expects("getData")->andReturn([$reportFileData1, $reportFileData2]);
-        $this->mockDataDiffs($reportFileData1)->expects("getComparingData")->andReturn([]);
-        $this->mockDataDiffs($reportFileData2)->expects("getComparingData")->andReturn(["changed_value"]);
+        $this->mockDataDiffs($reportFileData1)->expects("getOriginalData")->andReturn(null);
+        $this->mockDataDiffs($reportFileData1)->expects("getComparingData")->andReturn(null);
+        $this->mockDataDiffs($reportFileData2)->expects("getOriginalData")->andReturn("test");
+        $this->mockDataDiffs($reportFileData2)->expects("getComparingData")->andReturn("test1");
         $this->sender->expects("send");
 
         $this->strategy->generate();
@@ -62,7 +65,7 @@ class EmailReportGenerateStrategyTest extends TestCase
     protected function mockDataDiffs(MockInterface $reportFileData1)
     {
         $dataDiffs = \Mockery::mock(ReportFileDataDiffs::class);
-        $reportFileData1->expects("getContentDiffs")->andReturn($dataDiffs);
+        $reportFileData1->expects("getEncodingDiffs")->andReturn($dataDiffs);
         return $dataDiffs;
     }
 }
